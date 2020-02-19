@@ -31,6 +31,7 @@ TOKENS_ALPHANUMERIC = '[A-Za-z0-9]+(?=\\s+)'
 stop = set(stopwords.words('english'))
 stemmer = SnowballStemmer('english')
 
+
 def read_dataset(dataset):
     df = pd.read_csv(dataset, encoding='utf-8')
     return df
@@ -106,57 +107,35 @@ clean_data(train_data, QUESTION_2_COLUMN)
 clean_data(test_data, QUESTION_1_COLUMN)
 clean_data(test_data, QUESTION_2_COLUMN)
 
-scores_xgboost_accuracy = []
-scores_xgboost_precision = []
-scores_xgboost_recall = []
-scores_xgboost_f1 = []
-
 tfidf_ngram = TfidfVectorizer(analyzer='char', token_pattern=r'\w{1,}', ngram_range=(2, 3), max_features=5000)
 
-x_train_data = train_data()
-# tfidf_ngram.fit(pd.concat((train_data[QUESTION_1_COLUMN], train_data[QUESTION_2_COLUMN])).unique())
-#
-# trainq1_trans = tfidf_ngram.transform(train_data[QUESTION_1_COLUMN].values)
-# trainq2_trans = tfidf_ngram.transform(train_data[QUESTION_2_COLUMN].values)
+tfidf_ngram.fit(pd.concat((train_data[QUESTION_1_COLUMN], train_data[QUESTION_2_COLUMN])).unique())
+
+trainq1_trans = tfidf_ngram.transform(train_data[QUESTION_1_COLUMN].values)
+trainq2_trans = tfidf_ngram.transform(train_data[QUESTION_2_COLUMN].values)
 
 y_train_data = train_data['IsDuplicate']
-# X = scipy.sparse.hstack((trainq1_trans, trainq2_trans))
+x_train_data = scipy.sparse.hstack((trainq1_trans, trainq2_trans))
 
-kfold = KFold(n_splits=5, random_state=42, shuffle=True)
+x_train, x_test, y_train, y_test = train_test_split(x_train_data, y_train_data, test_size=0.33, random_state=42)
+
 xgb_model = XGBClassifier(max_depth=50, n_estimators=80, learning_rate=0.1,
-                          colsample_bytree=.7, gamma=0, reg_alpha=4, objective='binary:logistic', eta=0.3, silent=1,
+                          colsample_bytree=.7, gamma=0, reg_alpha=4, cv=5, objective='binary:logistic', eta=0.3,
+                          silent=1,
                           subsample=0.8)
-fold = 0
 
-for train_index, test_index in kfold.split(x_train_data):
-    fold += 1
-    print("Fold: %s" % fold)
+xgb_model.fit(x_train, y_train)
+xgb_prediction = xgb_model.predict(x_test)
 
-    x_train_k, x_test_k = x_train_data.iloc[train_index], x_train_data.iloc[test_index]
-    y_train_k, y_test_k = y_train_data.iloc[train_index], y_train_data.iloc[test_index]
+accuracy, precision, recall, f1 = metrics = calculate_metrics(y_test, xgb_prediction)
 
-    tfidf_ngram.fit_transform(x_train_k)
-    tfidf_ngram.fit_transform(x_test_k)
-
-    xgb_model.fit(x_train_k, y_train_k)
-
-    xgb_prediction = xgb_model.predict(x_test_k)
-
-    accuracy, precision, recall, f1 = metrics = calculate_metrics(y_test_k, xgb_prediction)
-
-    scores_xgboost_accuracy.append(accuracy)
-    scores_xgboost_precision.append(precision)
-    scores_xgboost_recall.append(recall)
-    scores_xgboost_f1.append(f1)
-
-    print(classification_report(x_test_k, xgb_prediction))
+print(classification_report(x_test, xgb_prediction))
 
 print("Xgboost metrics")
-print("Accuracy:" + str(np.mean(scores_xgboost_accuracy)))
-print("Precision:" + str(np.mean(scores_xgboost_precision)))
-print("Recall:" + str(np.mean(scores_xgboost_recall)))
-print("F1:" + str(np.mean(scores_xgboost_f1)))
-
+print("Accuracy:" + str(accuracy))
+print("Precision:" + str(precision))
+print("Recall:" + str(recall))
+print("F1:" + str(f1))
 
 testq1_trans = tfidf_ngram.transform(test_data['Question1'].values)
 testq2_trans = tfidf_ngram.transform(test_data['Question2'].values)
