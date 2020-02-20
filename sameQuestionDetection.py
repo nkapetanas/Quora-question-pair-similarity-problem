@@ -119,23 +119,21 @@ x_train_data = scipy.sparse.hstack((trainq1_trans, trainq2_trans))
 
 x_train, x_test, y_train, y_test = train_test_split(x_train_data, y_train_data, test_size=0.33, random_state=42)
 
-xgb_model = XGBClassifier(max_depth=50, n_estimators=80, learning_rate=0.1,
-                          colsample_bytree=.7, gamma=0, reg_alpha=4, cv=5, objective='binary:logistic', eta=0.3,
-                          silent=1,
-                          subsample=0.8)
+xgb_model = XGBClassifier(max_depth=50, n_estimators=80, learning_rate=0.1, colsample_bytree=.7, gamma=0, reg_alpha=4,
+                          objective='binary:logistic', eta=0.3, silent=1, subsample=0.8)
 
 xgb_model.fit(x_train, y_train)
 xgb_prediction = xgb_model.predict(x_test)
 
 accuracy, precision, recall, f1 = metrics = calculate_metrics(y_test, xgb_prediction)
 
-print(classification_report(x_test, xgb_prediction))
-
 print("Xgboost metrics")
 print("Accuracy:" + str(accuracy))
 print("Precision:" + str(precision))
 print("Recall:" + str(recall))
 print("F1:" + str(f1))
+
+print(classification_report(y_test, xgb_prediction))
 
 testq1_trans = tfidf_ngram.transform(test_data['Question1'].values)
 testq2_trans = tfidf_ngram.transform(test_data['Question2'].values)
