@@ -1,24 +1,16 @@
-import string
+from string import punctuation
 
 import numpy as np
-import re
 import pandas as pd
+import scipy
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
-from string import punctuation
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import HashingVectorizer, CountVectorizer, TfidfVectorizer
-from sklearn.linear_model import SGDClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import f1_score, accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
-import scipy
-from sklearn.metrics import f1_score, classification_report, accuracy_score
+from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
-from sklearn.model_selection import KFold, train_test_split, RandomizedSearchCV
-from sklearn.preprocessing import LabelEncoder
-from sklearn.naive_bayes import MultinomialNB
 
 DATASET_PATH_TRAIN = "C:/Users/Delta/PycharmProjects/Quora-question-pair-similarity-problem/dataset/train.csv"
 DATASET_PATH_TEST = "C:/Users/Delta/PycharmProjects/Quora-question-pair-similarity-problem/dataset/test_without_labels.csv"
@@ -117,15 +109,12 @@ trainq2_trans = tfidf_ngram.transform(train_data[QUESTION_2_COLUMN].values)
 y_train_data = train_data['IsDuplicate']
 x_train_data = scipy.sparse.hstack((trainq1_trans, trainq2_trans))
 
-#x_train, x_test, y_train, y_test = train_test_split(x_train_data, y_train_data, test_size=0.33, random_state=42)
-
-
-params_xgb = {'n_estimators' : [1, 2, 4, 8, 16, 32, 64, 100, 200],
-               'gamma':np.linspace(.01, 1, 10, endpoint=True),
-               'learning_rate' : np.linspace(.01, 1, 10, endpoint=True),
-               'reg_lambda': np.linspace(0.01, 10, 20, endpoint=True),
-               'max_depth' : np.linspace(1, 32, 32, endpoint=True, dtype=int)
-                 }
+params_xgb = {'n_estimators': [1, 2, 4, 8, 16, 32, 64, 100, 200],
+              'gamma': np.linspace(.01, 1, 10, endpoint=True),
+              'learning_rate': np.linspace(.01, 1, 10, endpoint=True),
+              'reg_lambda': np.linspace(0.01, 10, 20, endpoint=True),
+              'max_depth': np.linspace(1, 32, 32, endpoint=True, dtype=int)
+              }
 
 cv_xgb = RandomizedSearchCV(XGBClassifier(objective='binary:logistic', random_state=42),
                             param_distributions=params_xgb, cv=5, n_jobs=-1)
@@ -133,39 +122,14 @@ cv_xgb = RandomizedSearchCV(XGBClassifier(objective='binary:logistic', random_st
 cv_xgb.fit(x_train_data, y_train_data)
 
 xgb_model = XGBClassifier(random_state=42,
-                                  objective='binary:logistic',
-                                  n_estimators=cv_xgb.best_params_['n_estimators'],
-                                  gamma=cv_xgb.best_params_['gamma'],
-                                  learning_rate=cv_xgb.best_params_['learning_rate'],
-                                  reg_lambda=cv_xgb.best_params_['reg_lambda'],
-                                  max_depth=cv_xgb.best_params_['max_depth'],
-                                  n_jobs=-1)
+                          objective='binary:logistic',
+                          n_estimators=cv_xgb.best_params_['n_estimators'],
+                          gamma=cv_xgb.best_params_['gamma'],
+                          learning_rate=cv_xgb.best_params_['learning_rate'],
+                          reg_lambda=cv_xgb.best_params_['reg_lambda'],
+                          max_depth=cv_xgb.best_params_['max_depth'],
+                          n_jobs=-1)
 xgb_model.fit(x_train_data, y_train_data)
-
-#xgb_prediction = xgb_model.predict(x_test)
-
-
-
-
-
-
-
-
-# xgb_model = XGBClassifier(max_depth=50, n_estimators=80, learning_rate=0.1, colsample_bytree=.7, gamma=0, reg_alpha=4,
-#                           objective='binary:logistic', eta=0.3, silent=1, subsample=0.8)
-#
-# xgb_model.fit(x_train, y_train)
-# xgb_prediction = xgb_model.predict(x_test)
-
-#accuracy, precision, recall, f1 = metrics = calculate_metrics(y_test, xgb_prediction)
-
-# print("Xgboost metrics")
-# print("Accuracy:" + str(accuracy))
-# print("Precision:" + str(precision))
-# print("Recall:" + str(recall))
-# print("F1:" + str(f1))
-
-#print(classification_report(y_test, xgb_prediction))
 
 testq1_trans = tfidf_ngram.transform(test_data['Question1'].values)
 testq2_trans = tfidf_ngram.transform(test_data['Question2'].values)
