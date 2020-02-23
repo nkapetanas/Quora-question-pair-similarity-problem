@@ -5,7 +5,7 @@ import pandas as pd
 import scipy
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import f1_score, accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
